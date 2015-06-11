@@ -12,9 +12,10 @@
 
 @property (nonatomic, strong) UIScrollView *scrollView;
 @property (nonatomic, strong) UIImageView  *imageView;
-@property (nonatomic, strong) UIView       *croppingOverlayView;
+//@property (nonatomic, strong) UIView       *croppingOverlayView;
 @property (nonatomic, strong) UIView       *topBorderView;
 @property (nonatomic, strong) UIView       *bottomBorderView;
+@property (nonatomic, strong) UIView       *hollowView;
 @property (nonatomic, strong) UIImage      *imageToCrop;
 @property (nonatomic, strong) UIButton     *doneButton;
 @property (nonatomic, strong) UIButton     *cancelButton;
@@ -45,14 +46,14 @@
     [super viewDidLoad];
     
     self.backgroundColor         = (self.backgroundColor)         ?: [UIColor blackColor];
-    self.borderColor             = (self.borderColor)             ?: [UIColor lightGrayColor];
-    self.excludedBackgroundColor = (self.excludedBackgroundColor) ?: [UIColor darkGrayColor];
+    self.borderColor             = (self.borderColor)             ?: [UIColor clearColor];
+    self.excludedBackgroundColor = (self.excludedBackgroundColor) ?: [UIColor blackColor];
     self.doneFont                = (self.doneFont)                ?: [UIFont systemFontOfSize:16.0f];
     self.doneColor               = (self.doneColor)               ?: [UIColor whiteColor];
-    self.doneText                = (self.doneText)                ?: @"Done";
+    self.doneText                = (self.doneText)                ?: @"完了";
     self.cancelFont              = (self.cancelFont)              ?: [UIFont systemFontOfSize:14.0f];
     self.cancelColor             = (self.cancelColor)             ?: [UIColor whiteColor];
-    self.cancelText              = (self.cancelText)              ?: @"Cancel";
+    self.cancelText              = (self.cancelText)              ?: @"キャンセル";
     
     self.scrollView = [UIScrollView new];
     self.scrollView.delegate = self;
@@ -76,16 +77,22 @@
     self.croppingOverlayView.userInteractionEnabled = NO;
     self.croppingOverlayView.opaque = NO;
     
+    self.hollowView = [UIView new];
+    self.hollowView.backgroundColor = self.excludedBackgroundColor;
+    self.hollowView.alpha = 0.45f;
+    self.hollowView.userInteractionEnabled = NO;
+    self.hollowView.opaque = NO;
+    
     self.topBorderView = [UIView new];
     self.topBorderView.backgroundColor = self.excludedBackgroundColor;
     self.topBorderView.userInteractionEnabled = NO;
-    self.topBorderView.alpha = 0.85f;
+    self.topBorderView.alpha = 0.45f;
     self.topBorderView.opaque = NO;
     
     self.bottomBorderView = [UIView new];
     self.bottomBorderView.backgroundColor = self.excludedBackgroundColor;
     self.bottomBorderView.userInteractionEnabled = NO;
-    self.bottomBorderView.alpha = 0.85f;
+    self.bottomBorderView.alpha = 0.45f;
     self.bottomBorderView.opaque = NO;
     
     self.doneButton = [UIButton buttonWithType:UIButtonTypeCustom];
@@ -102,7 +109,15 @@
     [self.cancelButton addTarget:self action:@selector(cancelCrop) forControlEvents:UIControlEventTouchUpInside];
     [self.cancelButton sizeToFit];
     
-    NSDictionary *views = NSDictionaryOfVariableBindings(_scrollView, _doneButton, _cancelButton, _croppingOverlayView, _topBorderView, _bottomBorderView);
+    
+    
+    
+    
+    
+    
+    
+    
+    NSDictionary *views = NSDictionaryOfVariableBindings(_scrollView, _doneButton, _cancelButton, _croppingOverlayView, _topBorderView, _bottomBorderView, _hollowView );
     [views enumerateKeysAndObjectsUsingBlock:^(id key, UIView *view, BOOL *stop) {
         view.translatesAutoresizingMaskIntoConstraints = NO;
         [self.view addSubview:view];
@@ -113,7 +128,7 @@
         view.translatesAutoresizingMaskIntoConstraints = NO;
         [self.scrollView addSubview:view];
     }];
-
+    
     [self.view sendSubviewToBack:_scrollView];
     [self.view bringSubviewToFront:self.doneButton];
     [self.view bringSubviewToFront:self.cancelButton];
@@ -139,6 +154,26 @@
     insets.bottom = CGRectGetMaxY(self.bottomBorderView.bounds);
     self.scrollView.contentInset = insets;
     self.imageView.hidden = NO;
+    
+    
+    
+    CAShapeLayer *mask = [[CAShapeLayer alloc] init];
+    mask.fillRule = kCAFillRuleEvenOdd;
+    mask.fillColor = [UIColor blackColor].CGColor;
+    
+    // 画面全体
+    UIBezierPath *maskPath = [UIBezierPath bezierPathWithRect:self.hollowView.bounds];
+    // 穴を空ける
+    [maskPath moveToPoint:CGPointMake(CGRectGetWidth(self.hollowView.bounds) / 2.0, CGRectGetHeight(self.hollowView.bounds) / 2.0)];
+    [maskPath addArcWithCenter:CGPointMake(CGRectGetWidth(self.hollowView.bounds) / 2.0, CGRectGetHeight(self.hollowView.bounds) / 2.0) radius:self.hollowView.bounds.size.width / 2 startAngle:0 endAngle:2 * M_PI clockwise:YES];
+    
+    mask.path = maskPath.CGPath;
+    self.hollowView.layer.mask = mask;
+    
+    
+    
+    
+    
     
     [self resetZoomScaleAndContentOffset];
 }
@@ -217,14 +252,42 @@
 {
     UIImage *croppedImage = nil;
     
-    _cropRect.size.width = (CGFloat)round(CGRectGetWidth(self.croppingOverlayView.bounds)/self.zoomScale);
-    _cropRect.size.height = (CGFloat)round(CGRectGetHeight(self.croppingOverlayView.bounds)/self.zoomScale);
-    _cropRect.origin.x = (CGFloat)round((self.contentOffset.x + self.contentInset.left)/self.zoomScale);
-    _cropRect.origin.y = (CGFloat)round((self.contentOffset.y + self.contentInset.top)/self.zoomScale);
-    CGImageRef imageRef = CGImageCreateWithImageInRect(self.imageToCrop.CGImage, _cropRect);
-    croppedImage = [UIImage imageWithCGImage:imageRef];
-    CGImageRelease(imageRef);
-
+    CGRect croppedImageRect = CGRectZero;
+    
+    croppedImageRect.size = (CGSize){(CGFloat)round(CGRectGetWidth(self.croppingOverlayView.bounds)/self.zoomScale), (CGFloat)round(CGRectGetHeight(self.croppingOverlayView.bounds)/self.zoomScale)};
+    UIGraphicsBeginImageContextWithOptions(croppedImageRect.size, YES, [[UIScreen mainScreen] scale]);
+    
+    CGContextRef ctx = UIGraphicsGetCurrentContext();
+    
+    CGContextScaleCTM(ctx, 1.0f, 1.0f);
+    
+    // Translate to the selected offset
+    CGPoint translation = CGPointZero;
+    translation.x = -1.0f * (self.contentOffset.x + self.contentInset.left) / self.zoomScale;
+    translation.y = -1.0f * (self.contentOffset.y + self.contentInset.top) / self.zoomScale;
+    
+    // clamp translation to avoid dark rows on edges of cropped image due to numerical error
+    translation.x = MIN(0.0f, translation.x);
+    translation.y = MIN(0.0f, translation.y);
+    
+    translation.x = MAX(-(self.imageToCrop.size.width - CGRectGetWidth(croppedImageRect)), translation.x);
+    translation.y = MAX(-(self.imageToCrop.size.height - CGRectGetHeight(croppedImageRect)), translation.y);
+    
+    CGContextTranslateCTM(ctx, translation.x, translation.y);
+    
+    // Render the image at full size at (0, 0)
+    // Only the parts we want will be drawn in the context due to translation and scaling
+    // using the UIImage drawing method (rather than the core graphics method) makes it
+    // so that we don't have to flip the coordinate space to put the origin in the bottom
+    // right. It is also great because UIImage takes the imageOrientation into account
+    // when it draws so that we don't have to.
+    [self.imageToCrop drawAtPoint:CGPointZero];
+    
+    croppedImage = UIGraphicsGetImageFromCurrentImageContext();
+    UIGraphicsEndImageContext();
+    
+    _cropRect = (CGRect){.origin.x = -translation.x, .origin.y = -translation.y, .size.width = croppedImageRect.size.width, .size.height = croppedImageRect.size.height};
+    
     [self.squareCropperDelegate squareCropperDidCropImage:croppedImage inCropper:self];
 }
 
@@ -232,5 +295,16 @@
 {
     [self.squareCropperDelegate squareCropperDidCancelCropInCropper:self];
 }
+
+
+
+- (void)viewDidLayoutSubviews
+{
+    [super viewDidLayoutSubviews];
+    _hollowView.frame = _croppingOverlayView.frame;
+    [self.view bringSubviewToFront: _hollowView];
+}
+
+
 
 @end

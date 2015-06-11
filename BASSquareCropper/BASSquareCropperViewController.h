@@ -28,6 +28,7 @@
 @property (nonatomic, strong) UIFont   *cancelFont;
 @property (nonatomic, strong) UIColor  *cancelColor;
 @property (nonatomic, copy)   NSString *cancelText;
+@property (nonatomic, strong) UIView       *croppingOverlayView;
 @property (nonatomic, assign) id<BASSquareCropperDelegate>squareCropperDelegate;
 
 @property (nonatomic, assign, readonly) CGRect cropRect;
