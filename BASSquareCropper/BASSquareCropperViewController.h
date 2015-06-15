@@ -19,16 +19,15 @@
 
 @interface BASSquareCropperViewController : UIViewController
 
-@property (nonatomic, strong) UIColor  *backgroundColor;
-@property (nonatomic, strong) UIColor  *borderColor;
-@property (nonatomic, strong) UIColor  *excludedBackgroundColor;
-@property (nonatomic, strong) UIFont   *doneFont;
-@property (nonatomic, strong) UIColor  *doneColor;
+@property (nonatomic) UIColor  *backgroundColor;
+@property (nonatomic) UIColor  *borderColor;
+@property (nonatomic) UIColor  *excludedBackgroundColor;
+@property (nonatomic) UIFont   *doneFont;
+@property (nonatomic) UIColor  *doneColor;
 @property (nonatomic, copy)   NSString *doneText;
-@property (nonatomic, strong) UIFont   *cancelFont;
-@property (nonatomic, strong) UIColor  *cancelColor;
+@property (nonatomic) UIFont   *cancelFont;
+@property (nonatomic) UIColor  *cancelColor;
 @property (nonatomic, copy)   NSString *cancelText;
-@property (nonatomic, strong) UIView       *croppingOverlayView;
 @property (nonatomic, assign) id<BASSquareCropperDelegate>squareCropperDelegate;
 
 @property (nonatomic, assign, readonly) CGRect cropRect;
